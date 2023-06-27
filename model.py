@@ -34,25 +34,24 @@ def densenet121(num_classes):
 
 
 # 注意力机制模块
-from torch.nn import init
-
 class DSE(nn.Module):
     def __init__(self, in_channel, reduction):
         super(DSE, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Sequential(
-            nn.Linear(in_channel, in_channel // reduction),
+            nn.Conv2d(in_channel, in_channel // reduction, kernel_size=1, bias=False),
+            nn.BatchNorm2d(in_channel // reduction),
             nn.ReLU(inplace=True),
-            nn.Linear(in_channel // reduction, in_channel),
+            nn.Conv2d(in_channel // reduction, in_channel, kernel_size=1, bias=False),
+            nn.BatchNorm2d(in_channel),
             nn.Sigmoid()
         )
 
     def forward(self, x):
         b, c, _, _ = x.size()
-        x_se = self.avg_pool(x).view(b, c)
-        x_se = self.fc(x_se).view(b, c, 1, 1)
+        x_se = self.avg_pool(x).view(b, c, 1, 1)
+        x_se = self.fc(x_se)
         return x * x_se.expand_as(x)
-
 
 class CSE(nn.Module):
     def __init__(self, in_channel, reduction=16):
